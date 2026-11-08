@@ -1,0 +1,8 @@
+{
+    "run_name": "eval_mfr_net_svhn",
+    "top1_acc": 97.28,
+    "top5_acc": 99.86,
+    "macro_f1": 97.16,
+    "ece": 1.41,
+    "total_samples": 26032
+}

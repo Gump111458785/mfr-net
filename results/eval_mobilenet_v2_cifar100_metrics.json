@@ -1,0 +1,8 @@
+{
+    "run_name": "eval_mobilenet_v2_cifar100",
+    "top1_acc": 74.91,
+    "top5_acc": 92.68,
+    "macro_f1": 74.79,
+    "ece": 11.27,
+    "total_samples": 10000
+}

@@ -1,0 +1,8 @@
+{
+    "run_name": "eval_resnet50_cifar100",
+    "top1_acc": 79.2,
+    "top5_acc": 94.71,
+    "macro_f1": 79.11,
+    "ece": 9.63,
+    "total_samples": 10000
+}

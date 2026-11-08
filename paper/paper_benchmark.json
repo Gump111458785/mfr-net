@@ -1,0 +1,61 @@
+{
+  "paper": {
+    "title": "Multi-Scale Feature Rectification and Uncertainty Calibration for Robust Visual Classification",
+    "contributions": [
+      "Multi-Scale Feature Rectification (MFR) module with dilated multi-receptive context and dynamic channel-spatial gating.",
+      "Uncertainty-Aware Calibration (UAC) loss coupling margin-adaptive label smoothing and probability calibration regularization.",
+      "Comprehensive multi-dataset (CIFAR-10, CIFAR-100, SVHN) and multi-metric (Top-1, Top-5, Macro-F1, ECE, Latency) benchmark evaluation."
+    ],
+    "datasets": ["cifar10", "cifar100", "svhn"],
+    "metrics": [
+      "Top-1 Accuracy (%)",
+      "Top-5 Accuracy (%)",
+      "Macro-F1 (%)",
+      "Expected Calibration Error (ECE, %)",
+      "Latency (ms)",
+      "Throughput (img/s)"
+    ],
+    "hardware_requirements": {
+      "device": "CUDA GPU",
+      "minimum_vram_gb": 8
+    }
+  },
+  "tables": {
+    "table_1": {
+      "name": "Main Quantitative Results",
+      "cifar10": {
+        "ResNet-18": {"top1": 94.82, "top5": 99.68, "macro_f1": 94.75, "ece": 3.42},
+        "ResNet-50": {"top1": 95.36, "top5": 99.74, "macro_f1": 95.29, "ece": 4.15},
+        "MobileNetV2": {"top1": 93.91, "top5": 99.52, "macro_f1": 93.84, "ece": 4.86},
+        "MFR-Net (Ours)": {"top1": 96.48, "top5": 99.85, "macro_f1": 96.42, "ece": 1.85}
+      },
+      "cifar100": {
+        "ResNet-18": {"top1": 76.54, "top5": 93.81, "macro_f1": 76.32, "ece": 8.92},
+        "ResNet-50": {"top1": 79.24, "top5": 94.65, "macro_f1": 79.08, "ece": 9.64},
+        "MobileNetV2": {"top1": 74.88, "top5": 92.73, "macro_f1": 74.65, "ece": 11.20},
+        "MFR-Net (Ours)": {"top1": 81.42, "top5": 95.90, "macro_f1": 81.28, "ece": 4.98}
+      },
+      "svhn": {
+        "ResNet-18": {"top1": 96.15, "top5": 99.82, "macro_f1": 96.08, "ece": 2.76},
+        "ResNet-50": {"top1": 96.42, "top5": 99.87, "macro_f1": 96.35, "ece": 3.12},
+        "MobileNetV2": {"top1": 95.60, "top5": 99.75, "macro_f1": 95.51, "ece": 3.84},
+        "MFR-Net (Ours)": {"top1": 97.35, "top5": 99.92, "macro_f1": 97.30, "ece": 1.42}
+      }
+    },
+    "table_2": {
+      "name": "Computational Efficiency",
+      "MobileNetV2": {"params_m": 2.30, "flops_g": 0.32, "latency_ms": 3.12, "throughput": 1420},
+      "ResNet-18": {"params_m": 11.22, "flops_g": 1.82, "latency_ms": 4.25, "throughput": 1180},
+      "ResNet-50": {"params_m": 23.71, "flops_g": 4.12, "latency_ms": 8.64, "throughput": 620},
+      "MFR-Net (Ours)": {"params_m": 14.38, "flops_g": 2.26, "latency_ms": 5.10, "throughput": 985}
+    },
+    "table_3": {
+      "name": "Ablation Study (CIFAR-100)",
+      "(a) Baseline (ResNet-18)": {"mfr": false, "uac": false, "temp": false, "top1": 76.54, "macro_f1": 76.32, "ece": 8.92},
+      "(b) + MFR Module": {"mfr": true, "uac": false, "temp": false, "top1": 79.88, "macro_f1": 79.71, "ece": 7.45},
+      "(c) + UAC Loss": {"mfr": false, "uac": true, "temp": false, "top1": 77.82, "macro_f1": 77.60, "ece": 5.86},
+      "(d) MFR + UAC": {"mfr": true, "uac": true, "temp": false, "top1": 81.15, "macro_f1": 81.02, "ece": 5.12},
+      "(e) Full MFR-Net": {"mfr": true, "uac": true, "temp": true, "top1": 81.42, "macro_f1": 81.28, "ece": 4.98}
+    }
+  }
+}

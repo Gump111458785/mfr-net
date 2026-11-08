@@ -1,0 +1,41 @@
+{
+  "paper_title": "Multi-Scale Feature Rectification and Uncertainty Calibration for Robust Visual Classification",
+  "meta": {
+    "datasets": ["cifar10", "cifar100", "svhn"],
+    "metrics": ["top1_acc", "top5_acc", "macro_f1", "ece"],
+    "hardware_benchmark": "NVIDIA RTX 3090 / A100 GPU"
+  },
+  "table_1_main_results": {
+    "cifar10": {
+      "resnet18": {"top1_acc": 94.82, "top5_acc": 99.68, "macro_f1": 94.75, "ece": 3.42},
+      "resnet50": {"top1_acc": 95.36, "top5_acc": 99.74, "macro_f1": 95.29, "ece": 4.15},
+      "mobilenet_v2": {"top1_acc": 93.91, "top5_acc": 99.52, "macro_f1": 93.84, "ece": 4.86},
+      "mfr_net": {"top1_acc": 96.48, "top5_acc": 99.85, "macro_f1": 96.42, "ece": 1.85}
+    },
+    "cifar100": {
+      "resnet18": {"top1_acc": 76.54, "top5_acc": 93.81, "macro_f1": 76.32, "ece": 8.92},
+      "resnet50": {"top1_acc": 79.24, "top5_acc": 94.65, "macro_f1": 79.08, "ece": 9.64},
+      "mobilenet_v2": {"top1_acc": 74.88, "top5_acc": 92.73, "macro_f1": 74.65, "ece": 11.20},
+      "mfr_net": {"top1_acc": 81.42, "top5_acc": 95.90, "macro_f1": 81.28, "ece": 4.98}
+    },
+    "svhn": {
+      "resnet18": {"top1_acc": 96.15, "top5_acc": 99.82, "macro_f1": 96.08, "ece": 2.76},
+      "resnet50": {"top1_acc": 96.42, "top5_acc": 99.87, "macro_f1": 96.35, "ece": 3.12},
+      "mobilenet_v2": {"top1_acc": 95.60, "top5_acc": 99.75, "macro_f1": 95.51, "ece": 3.84},
+      "mfr_net": {"top1_acc": 97.35, "top5_acc": 99.92, "macro_f1": 97.30, "ece": 1.42}
+    }
+  },
+  "table_2_model_efficiency": {
+    "mobilenet_v2": {"params_m": 2.30, "flops_g": 0.32, "latency_ms": 3.12, "throughput": 1420},
+    "resnet18": {"params_m": 11.22, "flops_g": 1.82, "latency_ms": 4.25, "throughput": 1180},
+    "resnet50": {"params_m": 23.71, "flops_g": 4.12, "latency_ms": 8.64, "throughput": 620},
+    "mfr_net": {"params_m": 14.38, "flops_g": 2.26, "latency_ms": 5.10, "throughput": 985}
+  },
+  "table_3_ablation_cifar100": [
+    {"config": "(a) Baseline (ResNet-18)", "mfr": false, "uac": false, "temp": false, "top1_acc": 76.54, "macro_f1": 76.32, "ece": 8.92},
+    {"config": "(b) + MFR Module", "mfr": true, "uac": false, "temp": false, "top1_acc": 79.88, "macro_f1": 79.71, "ece": 7.45},
+    {"config": "(c) + UAC Loss", "mfr": false, "uac": true, "temp": false, "top1_acc": 77.82, "macro_f1": 77.60, "ece": 5.86},
+    {"config": "(d) MFR + UAC", "mfr": true, "uac": true, "temp": false, "top1_acc": 81.15, "macro_f1": 81.02, "ece": 5.12},
+    {"config": "(e) Full MFR-Net", "mfr": true, "uac": true, "temp": true, "top1_acc": 81.42, "macro_f1": 81.28, "ece": 4.98}
+  ]
+}

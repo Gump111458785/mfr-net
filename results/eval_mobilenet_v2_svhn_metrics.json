@@ -1,0 +1,8 @@
+{
+    "run_name": "eval_mobilenet_v2_svhn",
+    "top1_acc": 95.58,
+    "top5_acc": 99.79,
+    "macro_f1": 95.44,
+    "ece": 3.91,
+    "total_samples": 26032
+}
