@@ -47,8 +47,8 @@ def main():
     parser.add_argument("--weight_decay", type=float, default=5e-4)
     parser.add_argument("--use_mfr", action="store_true", default=True, help="Enable MFR module")
     parser.add_argument("--no_mfr", dest="use_mfr", action="store_false", help="Disable MFR module (for ablation)")
-    parser.add_argument("--use_uac", action="store_true", default=True, help="Enable Uncertainty-Aware Calibration Loss")
-    parser.add_argument("--no_uac", dest="use_uac", action="store_false", help="Disable UAC Loss (for ablation)")
+    parser.add_argument("--use_uac", dest="use_uac", action="store_true", default=None, help="Explicitly enable Uncertainty-Aware Calibration Loss")
+    parser.add_argument("--no_uac", dest="use_uac", action="store_false", help="Explicitly disable UAC Loss (for ablation)")
     parser.add_argument("--use_temp_scale", action="store_true", default=True, help="Enable temperature scaling")
     parser.add_argument("--no_temp_scale", dest="use_temp_scale", action="store_false", help="Disable temperature scaling")
     parser.add_argument("--seed", type=int, default=42)
@@ -96,11 +96,23 @@ def main():
     model = model.to(device)
 
     # Optimization Objective
-    criterion = UncertaintyCalibrationLoss(
-        smoothing=0.05,
-        cal_weight=0.15,
-        use_uac=args.use_uac,
-    ).to(device)
+    # Baselines (ResNet-18, ResNet-50, MobileNetV2) and non-UAC ablation variants
+    # strictly use standard nn.CrossEntropyLoss unless explicitly overridden.
+    if args.use_uac is None:
+        use_uac = (args.model == "mfr_net")
+    else:
+        use_uac = args.use_uac
+
+    if use_uac:
+        print("[Loss Objective] Employing Uncertainty-Aware Calibration (UAC) Loss.")
+        criterion = UncertaintyCalibrationLoss(
+            smoothing=0.05,
+            cal_weight=0.15,
+            use_uac=True,
+        ).to(device)
+    else:
+        print("[Loss Objective] Employing Standard Cross-Entropy Loss (nn.CrossEntropyLoss) for baseline / ablation.")
+        criterion = nn.CrossEntropyLoss().to(device)
 
     optimizer = optim.SGD(
         model.parameters(),

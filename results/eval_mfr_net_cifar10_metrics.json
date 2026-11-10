@@ -1,8 +1,0 @@
-{
-    "run_name": "eval_mfr_net_cifar10",
-    "top1_acc": 96.53,
-    "top5_acc": 99.83,
-    "macro_f1": 96.47,
-    "ece": 1.86,
-    "total_samples": 10000
-}

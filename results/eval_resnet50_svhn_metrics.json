@@ -1,8 +1,0 @@
-{
-    "run_name": "eval_resnet50_svhn",
-    "top1_acc": 96.43,
-    "top5_acc": 99.91,
-    "macro_f1": 96.42,
-    "ece": 3.19,
-    "total_samples": 26032
-}

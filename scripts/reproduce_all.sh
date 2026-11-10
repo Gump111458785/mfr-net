@@ -47,6 +47,8 @@ echo ""
 echo "=========================================================="
 echo " 5. Running Ablation Study on CIFAR-100 (Table 3 in Paper)"
 echo "=========================================================="
+# (a) Baseline ResNet-18
+python3 scripts/train.py --model resnet18 --dataset cifar100 --no_mfr --no_uac --no_temp_scale --output_dir "./checkpoints/ablation_a"
 # (b) + MFR Module only
 python3 scripts/train.py --model mfr_net --dataset cifar100 --use_mfr --no_uac --no_temp_scale --output_dir "./checkpoints/ablation_b"
 # (c) + UAC Loss only

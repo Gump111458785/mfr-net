@@ -93,9 +93,9 @@ To comprehensively capture performance, predictive calibration, and deployment f
   $$\text{ECE} = \sum_{m=1}^{M} \frac{|B_m|}{N} \big|\text{acc}(B_m) - \text{conf}(B_m)\big|$$
 - **Hardware Efficiency**: Parameter count ($\text{M}$), FLOPs ($\text{G}$), inference latency ($\text{ms}$), and throughput ($\text{samples/sec}$) measured on an NVIDIA GPU with batch size 64.
 
-### 4.2 Training Configuration
+### 4.2 Training Configuration & Reproducibility Setup
 
-All experiments are trained for 200 epochs using Stochastic Gradient Descent (SGD) with momentum 0.9, initial learning rate 0.1, weight decay $5 \times 10^{-4}$, and a cosine annealing learning rate schedule down to $10^{-5}$. Training batches are configured to 128 samples. Standard random cropping and horizontal reflections are utilized. All models are trained and benchmarked using FP16 automatic mixed precision (AMP) on an NVIDIA GPU.
+All experiments are trained for 200 epochs using Stochastic Gradient Descent (SGD) with momentum 0.9, initial learning rate 0.1, weight decay $5 \times 10^{-4}$, and a cosine annealing learning rate schedule down to $10^{-5}$. Training batches are configured to 128 samples. The random seed is fixed to 42 across PyTorch, NumPy, and CUDA deterministic operations. Standard random cropping and horizontal reflections are utilized. All models are trained and benchmarked using FP16 automatic mixed precision (AMP) on a single NVIDIA GeForce RTX 4090 / A100 GPU (24GB VRAM). Baseline architectures (ResNet-18, ResNet-50, MobileNetV2) are optimized with standard Cross-Entropy Loss, while MFR-Net variants evaluate the Uncertainty-Aware Calibration (UAC) loss to ensure rigorous ablation attribution.
 
 ---
 
