@@ -53,6 +53,8 @@ class StandaloneBatchDataset(Dataset):
         if isinstance(img, np.ndarray):
             if img.ndim == 1 and img.shape[0] == 3072:
                 img = img.reshape(3, 32, 32).transpose(1, 2, 0)
+            if img.dtype != np.uint8:
+                img = img.astype(np.uint8)
         if not isinstance(img, Image.Image):
             img = Image.fromarray(img)
         if self.transform is not None:
@@ -216,7 +218,7 @@ def get_dataloaders(
         shuffle=True,
         num_workers=num_workers,
         pin_memory=torch.cuda.is_available(),
-        drop_last=True,
+        drop_last=(train_size >= batch_size),
     )
     val_loader = DataLoader(
         val_subset,
