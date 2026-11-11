@@ -12,7 +12,32 @@ from typing import Dict, Tuple, List
 import numpy as np
 import torch
 import torch.nn.functional as F
-from sklearn.metrics import f1_score
+
+try:
+    from sklearn.metrics import f1_score
+except ImportError:
+    f1_score = None
+
+
+def compute_macro_f1(targets: np.ndarray, preds: np.ndarray) -> float:
+    """Computes macro-averaged F1 score with pure NumPy fallback (zero sklearn required)."""
+    if f1_score is not None:
+        try:
+            return float(f1_score(targets, preds, average="macro") * 100.0)
+        except Exception:
+            pass
+    classes = np.unique(targets)
+    if len(classes) == 0:
+        return 0.0
+    f1_list = []
+    for c in classes:
+        tp = np.sum((preds == c) & (targets == c))
+        fp = np.sum((preds == c) & (targets != c))
+        fn = np.sum((preds != c) & (targets == c))
+        denom = 2 * tp + fp + fn
+        f1 = (2.0 * tp / denom) if denom > 0 else 0.0
+        f1_list.append(f1)
+    return float(np.mean(f1_list) * 100.0) if len(f1_list) > 0 else 0.0
 
 
 def accuracy(output: torch.Tensor, target: torch.Tensor, topk: Tuple[int, ...] = (1, 5)) -> List[float]:
@@ -107,7 +132,7 @@ def evaluate_model(
 
     top1 = total_top1 / total_samples
     top5 = total_top5 / total_samples
-    macro_f1 = f1_score(all_targets, all_preds, average="macro") * 100.0
+    macro_f1 = compute_macro_f1(all_targets, all_preds)
     ece = compute_ece(all_probs, all_targets, n_bins=15)
 
     return {
