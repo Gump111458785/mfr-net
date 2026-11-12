@@ -40,7 +40,7 @@ def main():
     parser.add_argument("--dataset", type=str, default="cifar100", choices=SUPPORTED_DATASETS)
     parser.add_argument("--data_dir", type=str, default="./data/cache")
     parser.add_argument("--output_dir", type=str, default="./checkpoints")
-    parser.add_argument("--epochs", type=int, default=200)
+    parser.add_argument("--epochs", type=int, default=5, help="Training epochs (default: 5 for fast evaluation <=15min; set to 200 for full reproduction)")
     parser.add_argument("--batch_size", type=int, default=128)
     parser.add_argument("--lr", type=float, default=0.1)
     parser.add_argument("--momentum", type=float, default=0.9)
