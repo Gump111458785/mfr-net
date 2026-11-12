@@ -1,14 +1,12 @@
 """Dataset loading and data transformation pipelines for multi-dataset experiments.
 Supported datasets: CIFAR-10, CIFAR-100, SVHN.
+Strict authentic data enforcement: zero synthetic mock fallbacks.
 """
 
 import os
-import pickle
-from typing import Tuple, Dict, Any, List
-import numpy as np
-from PIL import Image
+from typing import Tuple, Dict, Any
 import torch
-from torch.utils.data import Dataset, DataLoader, random_split
+from torch.utils.data import DataLoader, random_split
 from torchvision import datasets, transforms
 from .download_data import verify_dataset, download_dataset
 
@@ -35,92 +33,6 @@ DATASET_CONFIGS = {
         "img_size": 32,
     },
 }
-
-
-class StandaloneBatchDataset(Dataset):
-    """Resilient dataset wrapper that bypasses external integrity locks."""
-
-    def __init__(self, data: np.ndarray, labels: List[int], transform=None):
-        self.data = data
-        self.labels = labels
-        self.transform = transform
-
-    def __len__(self):
-        return len(self.labels)
-
-    def __getitem__(self, idx):
-        img = self.data[idx]
-        if isinstance(img, np.ndarray):
-            if img.ndim == 1 and img.shape[0] == 3072:
-                img = img.reshape(3, 32, 32).transpose(1, 2, 0)
-            if img.dtype != np.uint8:
-                img = img.astype(np.uint8)
-        if not isinstance(img, Image.Image):
-            img = Image.fromarray(img)
-        if self.transform is not None:
-            img = self.transform(img)
-        return img, int(self.labels[idx])
-
-
-def load_cifar_fallback(target_dir: str, is_cifar100: bool = False, train_tf=None, test_tf=None, num_classes: int = 100):
-    folder_name = "cifar-100-python" if is_cifar100 else "cifar-10-batches-py"
-    extract_folder = os.path.join(target_dir, folder_name)
-
-    train_file = os.path.join(extract_folder, "train" if is_cifar100 else "data_batch_1")
-    test_file = os.path.join(extract_folder, "test" if is_cifar100 else "test_batch")
-
-    def read_batch_file(path):
-        if os.path.exists(path):
-            try:
-                with open(path, "rb") as f:
-                    d = pickle.load(f, encoding="latin1")
-                    data = d.get(b"data", d.get("data"))
-                    labels = d.get(b"fine_labels", d.get("fine_labels", d.get(b"labels", d.get("labels", [0] * len(data)))))
-                    return data, labels
-            except Exception:
-                pass
-        np.random.seed(42)
-        n = 1000
-        data = np.random.randint(0, 256, (n, 3072), dtype=np.uint8)
-        labels = np.random.randint(0, num_classes, (n,)).tolist()
-        return data, labels
-
-    tr_data, tr_labels = read_batch_file(train_file)
-    te_data, te_labels = read_batch_file(test_file)
-
-    return (
-        StandaloneBatchDataset(tr_data, tr_labels, transform=train_tf),
-        StandaloneBatchDataset(te_data, te_labels, transform=test_tf),
-    )
-
-
-def load_svhn_fallback(target_dir: str, train_tf=None, test_tf=None):
-    train_mat = os.path.join(target_dir, "train_32x32.mat")
-    test_mat = os.path.join(target_dir, "test_32x32.mat")
-
-    def read_mat(path):
-        if os.path.exists(path):
-            try:
-                from scipy.io import loadmat
-                loaded = loadmat(path)
-                X = loaded["X"].transpose((3, 0, 1, 2))
-                y = loaded["y"].squeeze()
-                return X, y.tolist()
-            except Exception:
-                pass
-        np.random.seed(42)
-        n = 1000
-        X = np.random.randint(0, 256, (n, 32, 32, 3), dtype=np.uint8)
-        y = np.random.randint(0, 10, (n,)).tolist()
-        return X, y
-
-    tr_X, tr_y = read_mat(train_mat)
-    te_X, te_y = read_mat(test_mat)
-
-    return (
-        StandaloneBatchDataset(tr_X, tr_y, transform=train_tf),
-        StandaloneBatchDataset(te_X, te_y, transform=test_tf),
-    )
 
 
 def get_dataset_info(dataset_name: str) -> Dict[str, Any]:
@@ -171,7 +83,11 @@ def get_dataloaders(
     download: bool = True,
     seed: int = 42,
 ) -> Tuple[DataLoader, DataLoader, DataLoader]:
-    """Construct PyTorch DataLoaders for train, validation, and test splits."""
+    """Construct PyTorch DataLoaders for train, validation, and test splits.
+    
+    Loads official datasets strictly. Raises explicit FileNotFoundError / RuntimeError
+    if authentic benchmark data is missing.
+    """
     dataset_name = dataset_name.lower()
     if dataset_name not in SUPPORTED_DATASETS:
         raise ValueError(f"Dataset {dataset_name} not supported. Must be in {SUPPORTED_DATASETS}")
@@ -179,32 +95,33 @@ def get_dataloaders(
     target_dir = os.path.join(data_dir, dataset_name)
     if not verify_dataset(dataset_name, data_dir):
         if download:
-            print(f"[Dataset] Missing cached data for '{dataset_name}'. Initiating download...")
+            print(f"[Dataset Pipeline] Missing cached data for '{dataset_name}'. Initiating official download...")
             download_dataset(dataset_name, data_dir)
+        else:
+            raise FileNotFoundError(
+                f"Authentic benchmark dataset '{dataset_name.upper()}' not found in '{target_dir}'.\n"
+                f"Please run 'bash scripts/download_data.sh' first to acquire the official data."
+            )
 
     train_tf, test_tf = get_transforms(dataset_name)
 
-    if dataset_name == "cifar10":
-        try:
-            full_train = datasets.CIFAR10(root=target_dir, train=True, transform=train_tf, download=True)
-            test_dataset = datasets.CIFAR10(root=target_dir, train=False, transform=test_tf, download=True)
-        except Exception as e:
-            print(f"[Dataset Fallback] Torchvision CIFAR10 check ({e}). Using resilient local loader.")
-            full_train, test_dataset = load_cifar_fallback(target_dir, is_cifar100=False, train_tf=train_tf, test_tf=test_tf, num_classes=10)
-    elif dataset_name == "cifar100":
-        try:
-            full_train = datasets.CIFAR100(root=target_dir, train=True, transform=train_tf, download=True)
-            test_dataset = datasets.CIFAR100(root=target_dir, train=False, transform=test_tf, download=True)
-        except Exception as e:
-            print(f"[Dataset Fallback] Torchvision CIFAR100 check ({e}). Using resilient local loader.")
-            full_train, test_dataset = load_cifar_fallback(target_dir, is_cifar100=True, train_tf=train_tf, test_tf=test_tf, num_classes=100)
-    elif dataset_name == "svhn":
-        try:
-            full_train = datasets.SVHN(root=target_dir, split="train", transform=train_tf, download=True)
-            test_dataset = datasets.SVHN(root=target_dir, split="test", transform=test_tf, download=True)
-        except Exception as e:
-            print(f"[Dataset Fallback] Torchvision SVHN check ({e}). Using resilient local loader.")
-            full_train, test_dataset = load_svhn_fallback(target_dir, train_tf, test_tf)
+    try:
+        if dataset_name == "cifar10":
+            full_train = datasets.CIFAR10(root=target_dir, train=True, transform=train_tf, download=download)
+            test_dataset = datasets.CIFAR10(root=target_dir, train=False, transform=test_tf, download=download)
+        elif dataset_name == "cifar100":
+            full_train = datasets.CIFAR100(root=target_dir, train=True, transform=train_tf, download=download)
+            test_dataset = datasets.CIFAR100(root=target_dir, train=False, transform=test_tf, download=download)
+        elif dataset_name == "svhn":
+            full_train = datasets.SVHN(root=target_dir, split="train", transform=train_tf, download=download)
+            test_dataset = datasets.SVHN(root=target_dir, split="test", transform=test_tf, download=download)
+    except Exception as e:
+        raise RuntimeError(
+            f"Failed to load authentic '{dataset_name.upper()}' benchmark dataset from '{target_dir}' ({e}).\n"
+            f"To download the authentic benchmark datasets, please execute:\n"
+            f"    bash scripts/download_data.sh\n"
+            f"or ensure network connectivity for automated torchvision acquisition."
+        ) from e
 
     # Split full_train into train and validation
     val_size = int(len(full_train) * val_ratio)
@@ -218,7 +135,7 @@ def get_dataloaders(
         shuffle=True,
         num_workers=num_workers,
         pin_memory=torch.cuda.is_available(),
-        drop_last=(train_size >= batch_size),
+        drop_last=True,
     )
     val_loader = DataLoader(
         val_subset,

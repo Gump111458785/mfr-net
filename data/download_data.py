@@ -8,9 +8,6 @@ import sys
 import argparse
 import urllib.request
 import tarfile
-import pickle
-import random
-import struct
 
 SUPPORTED_DATASETS = ["cifar10", "cifar100", "svhn"]
 
@@ -22,7 +19,7 @@ DATASET_URLS = {
     ],
     "cifar100": [
         "https://www.cs.toronto.edu/~kriz/cifar-100-python.tar.gz",
-        "https://storage.googleapis.com/cvdf-datasets/cifar-100-python.tar.gz",
+        "https://storage.googleapis.com/cvdf-datasets/cifar-10-python.tar.gz",
     ],
     "svhn": [
         "http://ufldl.stanford.edu/housenumbers/train_32x32.mat",
@@ -59,28 +56,6 @@ def download_file_with_progress(url: str, dest_path: str, timeout: int = 30) -> 
         return False
 
 
-def create_pure_python_mock_cifar(file_path: str, num_samples: int = 1000, num_classes: int = 10, is_cifar100: bool = False):
-    """Generates standard binary CIFAR batch using pure standard library (no numpy required)."""
-    try:
-        import numpy as np
-        data = np.random.randint(0, 256, (num_samples, 3072), dtype=np.uint8)
-        labels = np.random.randint(0, num_classes, (num_samples,), dtype=np.int64).tolist()
-    except ImportError:
-        # Pure Python fallback
-        random.seed(42)
-        raw_bytes = bytearray(random.getrandbits(8) for _ in range(num_samples * 3072))
-        data = bytes(raw_bytes)
-        labels = [random.randint(0, num_classes - 1) for _ in range(num_samples)]
-
-    payload = {
-        b"data": data,
-        b"labels" if not is_cifar100 else b"fine_labels": labels,
-        b"filenames": [f"img_{i}.png".encode() for i in range(num_samples)]
-    }
-    with open(file_path, "wb") as f:
-        pickle.dump(payload, f)
-
-
 def prepare_cifar10(target_dir: str) -> bool:
     extract_folder = os.path.join(target_dir, "cifar-10-batches-py")
     test_batch = os.path.join(extract_folder, "test_batch")
@@ -104,19 +79,12 @@ def prepare_cifar10(target_dir: str) -> bool:
             print("[Extract] CIFAR-10 successfully unpacked.")
             return True
         except Exception as e:
-            print(f"[Extract Error] Failed to unpack tar.gz: {e}")
+            raise RuntimeError(f"Failed to unpack CIFAR-10 archive '{archive_path}': {e}")
 
-    # Air-gapped / offline fallback
-    print("[Dataset Fallback] Initializing standardized CIFAR-10 batch cache...")
-    os.makedirs(extract_folder, exist_ok=True)
-    meta = {b"label_names": [f"class_{i}".encode() for i in range(10)]}
-    with open(os.path.join(extract_folder, "batches.meta"), "wb") as f:
-        pickle.dump(meta, f)
-    for i in range(1, 6):
-        create_pure_python_mock_cifar(os.path.join(extract_folder, f"data_batch_{i}"), num_samples=1000, num_classes=10)
-    create_pure_python_mock_cifar(os.path.join(extract_folder, "test_batch"), num_samples=1000, num_classes=10)
-    print("[Dataset Fallback] CIFAR-10 dataset ready.")
-    return True
+    raise RuntimeError(
+        "Failed to download official CIFAR-10 benchmark dataset from official mirrors.\n"
+        "Please check your internet connection or mirror availability."
+    )
 
 
 def prepare_cifar100(target_dir: str) -> bool:
@@ -142,18 +110,12 @@ def prepare_cifar100(target_dir: str) -> bool:
             print("[Extract] CIFAR-100 successfully unpacked.")
             return True
         except Exception as e:
-            print(f"[Extract Error] Failed to unpack tar.gz: {e}")
+            raise RuntimeError(f"Failed to unpack CIFAR-100 archive '{archive_path}': {e}")
 
-    # Air-gapped / offline fallback
-    print("[Dataset Fallback] Initializing standardized CIFAR-100 batch cache...")
-    os.makedirs(extract_folder, exist_ok=True)
-    meta = {b"fine_label_names": [f"fine_{i}".encode() for i in range(100)]}
-    with open(os.path.join(extract_folder, "meta"), "wb") as f:
-        pickle.dump(meta, f)
-    create_pure_python_mock_cifar(os.path.join(extract_folder, "train"), num_samples=2000, num_classes=100, is_cifar100=True)
-    create_pure_python_mock_cifar(os.path.join(extract_folder, "test"), num_samples=1000, num_classes=100, is_cifar100=True)
-    print("[Dataset Fallback] CIFAR-100 dataset ready.")
-    return True
+    raise RuntimeError(
+        "Failed to download official CIFAR-100 benchmark dataset from official mirrors.\n"
+        "Please check your internet connection or mirror availability."
+    )
 
 
 def prepare_svhn(target_dir: str) -> bool:
@@ -170,26 +132,13 @@ def prepare_svhn(target_dir: str) -> bool:
             download_file_with_progress(url, dest)
 
     if os.path.exists(train_mat) and os.path.exists(test_mat):
+        print("[Dataset] SVHN dataset successfully acquired.")
         return True
 
-    print("[Dataset Fallback] Generating standardized mock SVHN structure...")
-    try:
-        from scipy.io import savemat
-        import numpy as np
-        X_tr = np.random.randint(0, 256, (32, 32, 3, 2000), dtype=np.uint8)
-        y_tr = np.random.randint(0, 10, (2000, 1), dtype=np.uint8)
-        savemat(train_mat, {"X": X_tr, "y": y_tr})
-        X_te = np.random.randint(0, 256, (32, 32, 3, 1000), dtype=np.uint8)
-        y_te = np.random.randint(0, 10, (1000, 1), dtype=np.uint8)
-        savemat(test_mat, {"X": X_te, "y": y_te})
-        return True
-    except Exception:
-        # Touch minimal placeholder files so verify_dataset returns True
-        with open(train_mat, "wb") as f:
-            f.write(b"MATLAB 5.0 MAT-file Placeholder")
-        with open(test_mat, "wb") as f:
-            f.write(b"MATLAB 5.0 MAT-file Placeholder")
-        return True
+    raise RuntimeError(
+        "Failed to download official SVHN benchmark dataset from Stanford UFHDL repository.\n"
+        "Please check network connectivity to http://ufldl.stanford.edu/housenumbers/."
+    )
 
 
 def download_dataset(dataset_name: str, root_dir: str = "./data/cache") -> bool:
